@@ -29,7 +29,10 @@ final class RMCharacterListViewViewModel: NSObject {
                     characterStatus: character.status,
                     characterImageUrl: URL(string: character.image)
                 )
-                cellViewModels.append(viewModel)
+                
+                if !cellViewModels.contains(viewModel) {
+                    cellViewModels.append(viewModel)
+                }
             }
         }
     }
@@ -87,12 +90,20 @@ final class RMCharacterListViewViewModel: NSObject {
             case .success(let responseModel):
                 let moreResults = responseModel.results
                 let info = responseModel.info
-                strongSelf.characters.append(contentsOf: moreResults)
-                let originalCount = strongSelf.characters.count
                 strongSelf.apiInfo = info
+                
+                let originalCount = strongSelf.characters.count
+                let newCount = moreResults.count
+                let total = originalCount+newCount
+                let startingIndex = total - newCount
+                let indexToPaths: [IndexPath] = Array(startingIndex..<(startingIndex+newCount)).compactMap({
+                    return IndexPath(row: $0, section: 0)
+                })
+                
+                strongSelf.characters.append(contentsOf: moreResults)
                 DispatchQueue.main.async {
                     strongSelf.delegate?.didLoadMoreCharacters(
-                        with: []
+                        with: indexToPaths
                     )
                     strongSelf.isLoadingMoreCharacters = false
                 }
@@ -183,7 +194,7 @@ extension RMCharacterListViewViewModel: UIScrollViewDelegate {
             return
         }
         
-        Timer.scheduledTimer(withTimeInterval: 0.2, repeats: false) { [weak self] t in
+        Timer.scheduledTimer(withTimeInterval: 0.0, repeats: false) { [weak self] t in
             let offset = scrollView.contentOffset.y
             let totalContentHeight = scrollView.contentSize.height
             let totalScrollViewFixedHeight = scrollView.frame.size.height
